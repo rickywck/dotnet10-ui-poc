@@ -1,0 +1,94 @@
+@using EmployeeCore.Shared.Models
+@using EmployeeCore.Shared.Services
+@using EmployeeCore.Shared.Validators
+@inject IEmployeeRepository Repository
+@inject NavigationManager Navigation
+
+<div class="container">
+    <div class="header-row">
+        <h1>@(IsEditMode ? "Edit Employee" : "Create Employee")</h1>
+        <a href="/" class="btn btn-secondary">Back to List</a>
+    </div>
+
+    @if (validationErrors.Count > 0)
+    {
+        <div class="validation-summary">
+            <ul>
+                @foreach (var error in validationErrors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <form method="post" action="@(IsEditMode ? $"/edit/{Employee.Id}" : "/create")" class="employee-form">
+        @if (IsEditMode)
+        {
+            <div class="form-group">
+                <label>ID</label>
+                <input type="number" value="@Employee.Id" readonly />
+                <input type="hidden" name="id" value="@Employee.Id" />
+            </div>
+        }
+
+        <div class="form-group">
+            <label for="firstName">First Name</label>
+            <input type="text" id="firstName" name="firstName" value="@Employee.FirstName" required />
+            @if (validationErrors.Contains("First name is required"))
+            {
+                <span class="field-validation-error">First name is required</span>
+            }
+        </div>
+
+        <div class="form-group">
+            <label for="lastName">Last Name</label>
+            <input type="text" id="lastName" name="lastName" value="@Employee.LastName" required />
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="@Employee.Email" required />
+        </div>
+
+        <div class="form-group">
+            <label for="department">Department</label>
+            <input type="text" id="department" name="department" value="@Employee.Department" required />
+        </div>
+
+        <div class="form-group">
+            <label for="hireDate">Hire Date</label>
+            <input type="date" id="hireDate" name="hireDate" value="@Employee.HireDate.ToString("yyyy-MM-dd")" required />
+        </div>
+
+        <div class="form-group">
+            <label for="salary">Salary</label>
+            <input type="number" id="salary" name="salary" value="@Employee.Salary" step="0.01" min="0" required />
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">@(IsEditMode ? "Save" : "Create")</button>
+            <a href="/" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+@code {
+    [Parameter]
+    public Employee? Employee { get; set; }
+
+    [Parameter]
+    public bool IsEditMode { get; set; }
+
+    private List<string> validationErrors = new();
+
+    private Employee DefaultEmployee => new() { HireDate = DateTime.Today };
+
+    protected override void OnInitialized()
+    {
+        if (Employee == null)
+        {
+            Employee = DefaultEmployee;
+        }
+    }
+}

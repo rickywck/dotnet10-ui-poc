@@ -1,0 +1,57 @@
+@page
+@model CreateModel
+@{
+    ViewData["Title"] = "Create Employee";
+}
+
+<div class="container">
+    <div class="header-row">
+        <h1>Create Employee</h1>
+        <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
+    </div>
+
+    <form method="post" class="employee-form">
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+        <div class="form-group">
+            <label asp-for="Employee.FirstName">First Name</label>
+            <input asp-for="Employee.FirstName" class="form-control" />
+            <span asp-validation-for="Employee.FirstName" class="field-validation-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Employee.LastName">Last Name</label>
+            <input asp-for="Employee.LastName" class="form-control" />
+            <span asp-validation-for="Employee.LastName" class="field-validation-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Employee.Email">Email</label>
+            <input asp-for="Employee.Email" class="form-control" type="email" />
+            <span asp-validation-for="Employee.Email" class="field-validation-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Employee.Department">Department</label>
+            <input asp-for="Employee.Department" class="form-control" />
+            <span asp-validation-for="Employee.Department" class="field-validation-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Employee.HireDate">Hire Date</label>
+            <input asp-for="Employee.HireDate" class="form-control" type="date" />
+            <span asp-validation-for="Employee.HireDate" class="field-validation-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Employee.Salary">Salary</label>
+            <input asp-for="Employee.Salary" class="form-control" type="number" step="0.01" min="0" />
+            <span asp-validation-for="Employee.Salary" class="field-validation-error"></span>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create</button>
+            <a asp-page="./Index" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

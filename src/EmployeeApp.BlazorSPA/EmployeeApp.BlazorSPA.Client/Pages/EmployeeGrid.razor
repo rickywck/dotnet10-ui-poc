@@ -1,0 +1,126 @@
+@page "/"
+@using EmployeeCore.Shared.Models
+@using EmployeeApp.BlazorSPA.Client.Services
+@rendermode @(new Microsoft.AspNetCore.Components.Web.InteractiveWebAssemblyRenderMode(prerender: false))
+@inject EmployeeApiClient ApiClient
+@inject NavigationManager NavigationManager
+
+<div class="container">
+    <div class="header-row">
+        <h1>Employees</h1>
+        <button @onclick="NavigateToCreate" class="btn btn-primary">Add New Employee</button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="empty-state">
+            <p>Loading employees...</p>
+        </div>
+    }
+    else if (employees.Count == 0)
+    {
+        <div class="empty-state">
+            <p>No employees found. Create your first employee!</p>
+            <button @onclick="NavigateToCreate" class="btn btn-primary">Add Employee</button>
+        </div>
+    }
+    else
+    {
+        <table class="employee-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Department</th>
+                    <th>Hire Date</th>
+                    <th>Salary</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var employee in employees)
+                {
+                    <tr>
+                        <td>@employee.Id</td>
+                        <td>@employee.FullName</td>
+                        <td>@employee.Email</td>
+                        <td>@employee.Department</td>
+                        <td>@employee.HireDate:yyyy-MM-dd</td>
+                        <td>@employee.Salary:C</td>
+                        <td class="actions">
+                            <button @onclick="() => NavigateToEdit(employee.Id)" class="btn btn-sm btn-secondary">Edit</button>
+                            <button @onclick="() => ConfirmDelete(employee)" class="btn btn-sm btn-danger">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@if (showDeleteDialog && employeeToDelete != null)
+{
+    <div class="modal-overlay" @onclick="CancelDelete">
+        <div class="modal-content" @onclick:stopPropagation>
+            <h2>Confirm Delete</h2>
+            <p>Are you sure you want to delete <strong>@employeeToDelete.FullName</strong>?</p>
+            <div class="modal-actions">
+                <button @onclick="ConfirmDeleteAction" class="btn btn-danger">Delete</button>
+                <button @onclick="CancelDelete" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Employee> employees = new();
+    private bool isLoading = true;
+    private bool showDeleteDialog = false;
+    private Employee? employeeToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEmployees();
+    }
+
+    private async Task LoadEmployees()
+    {
+        isLoading = true;
+        employees = await ApiClient.GetAllAsync();
+        isLoading = false;
+    }
+
+    private void NavigateToCreate()
+    {
+        NavigationManager.NavigateTo("/create");
+    }
+
+    private void NavigateToEdit(int id)
+    {
+        NavigationManager.NavigateTo($"/edit/{id}");
+    }
+
+    private void ConfirmDelete(Employee employee)
+    {
+        employeeToDelete = employee;
+        showDeleteDialog = true;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteDialog = false;
+        employeeToDelete = null;
+    }
+
+    private async Task ConfirmDeleteAction()
+    {
+        if (employeeToDelete != null)
+        {
+            await ApiClient.DeleteAsync(employeeToDelete.Id);
+            showDeleteDialog = false;
+            employeeToDelete = null;
+            await LoadEmployees();
+        }
+    }
+}

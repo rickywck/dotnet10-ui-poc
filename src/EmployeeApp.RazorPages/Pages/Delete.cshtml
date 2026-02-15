@@ -1,0 +1,48 @@
+@page "{id:int}"
+@model DeleteModel
+@{
+    ViewData["Title"] = "Delete Employee";
+}
+
+<div class="container">
+    <div class="header-row">
+        <h1>Delete Employee</h1>
+        <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
+    </div>
+
+    <div class="delete-confirmation">
+        <h2>Are you sure you want to delete this employee?</h2>
+
+        <div class="employee-details">
+            <div class="detail-row">
+                <strong>ID:</strong>
+                <span>@Model.Employee.Id</span>
+            </div>
+            <div class="detail-row">
+                <strong>Name:</strong>
+                <span>@Model.Employee.FullName</span>
+            </div>
+            <div class="detail-row">
+                <strong>Email:</strong>
+                <span>@Model.Employee.Email</span>
+            </div>
+            <div class="detail-row">
+                <strong>Department:</strong>
+                <span>@Model.Employee.Department</span>
+            </div>
+            <div class="detail-row">
+                <strong>Hire Date:</strong>
+                <span>@Model.Employee.HireDate:yyyy-MM-dd</span>
+            </div>
+            <div class="detail-row">
+                <strong>Salary:</strong>
+                <span>@Model.Employee.Salary:C</span>
+            </div>
+        </div>
+
+        <form method="post" class="delete-form">
+            <button type="submit" class="btn btn-danger">Delete</button>
+            <a asp-page="./Index" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>

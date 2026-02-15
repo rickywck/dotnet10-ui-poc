@@ -1,0 +1,53 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Employees";
+}
+
+<div class="container">
+    <div class="header-row">
+        <h1>Employees</h1>
+        <a asp-page="./Create" class="btn btn-primary">Add New Employee</a>
+    </div>
+
+    @if (Model.Employees.Count == 0)
+    {
+        <div class="empty-state">
+            <p>No employees found. Create your first employee!</p>
+            <a asp-page="./Create" class="btn btn-primary">Add Employee</a>
+        </div>
+    }
+    else
+    {
+        <table class="employee-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Department</th>
+                    <th>Hire Date</th>
+                    <th>Salary</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var employee in Model.Employees)
+                {
+                    <tr>
+                        <td>@employee.Id</td>
+                        <td>@employee.FullName</td>
+                        <td>@employee.Email</td>
+                        <td>@employee.Department</td>
+                        <td>@employee.HireDate:yyyy-MM-dd</td>
+                        <td>@employee.Salary:C</td>
+                        <td class="actions">
+                            <a asp-page="./Edit" asp-route-id="@employee.Id" class="btn btn-sm btn-secondary">Edit</a>
+                            <a asp-page="./Delete" asp-route-id="@employee.Id" class="btn btn-sm btn-danger">Delete</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

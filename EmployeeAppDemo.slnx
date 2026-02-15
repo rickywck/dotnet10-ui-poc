@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EmployeeApp.BlazorStaticSSR/EmployeeApp.BlazorStaticSSR.csproj" />
+    <Project Path="src/EmployeeApp.RazorPages/EmployeeApp.RazorPages.csproj" />
+    <Project Path="src/EmployeeCore.Shared/EmployeeCore.Shared.csproj" />
+  </Folder>
+  <Folder Name="/src/EmployeeApp.BlazorSPA/">
+    <Project Path="src/EmployeeApp.BlazorSPA/EmployeeApp.BlazorSPA.Client/EmployeeApp.BlazorSPA.Client.csproj" />
+    <Project Path="src/EmployeeApp.BlazorSPA/EmployeeApp.BlazorSPA/EmployeeApp.BlazorSPA.csproj" />
+  </Folder>
+</Solution>

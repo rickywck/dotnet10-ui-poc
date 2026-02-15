@@ -1,0 +1,12 @@
+@page "/create"
+@using EmployeeApp.BlazorStaticSSR.Components
+@using EmployeeCore.Shared.Models
+@using EmployeeCore.Shared.Services
+@inject IEmployeeRepository Repository
+@inject NavigationManager Navigation
+
+<EmployeeForm Employee="newEmployee" IsEditMode="false" />
+
+@code {
+    private Employee newEmployee = new() { HireDate = DateTime.Today };
+}

@@ -1,0 +1,149 @@
+@page "/create"
+@page "/edit/{id:int}"
+@using EmployeeCore.Shared.Models
+@using EmployeeCore.Shared.Validators
+@using EmployeeApp.BlazorSPA.Client.Services
+@rendermode @(new Microsoft.AspNetCore.Components.Web.InteractiveWebAssemblyRenderMode(prerender: false))
+@inject EmployeeApiClient ApiClient
+@inject NavigationManager NavigationManager
+
+<div class="container">
+    <div class="header-row">
+        <h1>@(IsEditMode ? "Edit Employee" : "Create Employee")</h1>
+        <button @onclick="Cancel" class="btn btn-secondary">Back to List</button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="empty-state">
+            <p>Loading...</p>
+        </div>
+    }
+    else
+    {
+        <EditForm Model="@Employee" OnValidSubmit="HandleSubmit" class="employee-form">
+            <DataAnnotationsValidator />
+
+            <div class="form-group">
+                <label for="firstName">First Name</label>
+            <InputText id="firstName" @bind-Value="Employee.FirstName" class="form-control" />
+            <ValidationMessage For="() => Employee.FirstName" />
+        </div>
+
+        <div class="form-group">
+            <label for="lastName">Last Name</label>
+            <InputText id="lastName" @bind-Value="Employee.LastName" class="form-control" />
+            <ValidationMessage For="() => Employee.LastName" />
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <InputText id="email" @bind-Value="Employee.Email" class="form-control" inputmode="email" />
+            <ValidationMessage For="() => Employee.Email" />
+        </div>
+
+        <div class="form-group">
+            <label for="department">Department</label>
+            <InputText id="department" @bind-Value="Employee.Department" class="form-control" />
+            <ValidationMessage For="() => Employee.Department" />
+        </div>
+
+        <div class="form-group">
+            <label for="hireDate">Hire Date</label>
+            <InputDate id="hireDate" @bind-Value="Employee.HireDate" class="form-control" />
+            <ValidationMessage For="() => Employee.HireDate" />
+        </div>
+
+        <div class="form-group">
+            <label for="salary">Salary</label>
+            <InputNumber id="salary" @bind-Value="Employee.Salary" class="form-control" />
+            <ValidationMessage For="() => Employee.Salary" />
+        </div>
+
+        @if (validationErrors.Count > 0)
+        {
+            <div class="validation-summary">
+                <ul>
+                    @foreach (var error in validationErrors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                @(isSubmitting ? "Saving..." : (IsEditMode ? "Save" : "Create"))
+            </button>
+            <button type="button" @onclick="Cancel" class="btn btn-secondary">Cancel</button>
+        </div>
+    </EditForm>
+}
+</div>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private Employee Employee = new() { HireDate = DateTime.Today };
+    private bool isLoading = false;
+    private bool isSubmitting = false;
+    private List<string> validationErrors = new();
+
+    private bool IsEditMode => Id.HasValue;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsEditMode && Id.HasValue)
+        {
+            isLoading = true;
+            var employee = await ApiClient.GetByIdAsync(Id.Value);
+            if (employee != null)
+            {
+                Employee = employee;
+            }
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        // Run custom validation
+        var (isValid, errors) = EmployeeValidator.Validate(Employee);
+        if (!isValid)
+        {
+            validationErrors = errors;
+            return;
+        }
+
+        isSubmitting = true;
+        validationErrors.Clear();
+
+        try
+        {
+            if (IsEditMode)
+            {
+                await ApiClient.UpdateAsync(Employee);
+            }
+            else
+            {
+                await ApiClient.CreateAsync(Employee);
+            }
+            NavigationManager.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            validationErrors = new List<string> { $"Error: {ex.Message}" };
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

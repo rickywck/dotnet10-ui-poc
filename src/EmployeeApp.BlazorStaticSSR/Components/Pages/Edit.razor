@@ -1,0 +1,23 @@
+@page "/edit/{id:int}"
+@using EmployeeApp.BlazorStaticSSR.Components
+@using EmployeeCore.Shared.Models
+@using EmployeeCore.Shared.Services
+@inject IEmployeeRepository Repository
+
+<EmployeeForm Employee="employee" IsEditMode="true" />
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Employee? employee = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        employee = await Repository.GetByIdAsync(Id);
+        if (employee == null)
+        {
+            employee = new Employee();
+        }
+    }
+}
