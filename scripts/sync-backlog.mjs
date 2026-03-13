@@ -4,27 +4,30 @@ import path from "path";
 import { Octokit } from "@octokit/rest";
 import { graphql } from "@octokit/graphql";
 
-// ===== CONFIG =====
 const owner = "rickywck"; // replace
 const repo = "dotnet10-ui-poc";               // replace
-const projectNumber = 1;                     // the number in GitHub URL, e.g., https://github.com/orgs/ORG/projects/1
-// ==================
+const projectNumber = 1;                     // the number in GitHub URL: /projects/1
 
-const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN, // PAT with repo + project access
-});
-
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 const graphqlWithAuth = graphql.defaults({
   headers: { authorization: `token ${process.env.GITHUB_TOKEN}` },
 });
 
-// Fetch the GraphQL project ID dynamically
+// ===== GraphQL query to get project v2 node ID =====
 async function getProjectId() {
-  const project = await octokit.projects.get({
-    project_id: projectNumber
-  });
-  console.log("Detected Project node_id:", project.data.node_id);
-  return project.data.node_id;
+  const query = `
+    query($owner:String!, $repo:String!, $number:Int!) {
+      repository(owner:$owner, name:$repo) {
+        projectV2(number:$number) {
+          id
+          title
+        }
+      }
+    }
+  `;
+  const result = await graphqlWithAuth(query, { owner, repo, number: projectNumber });
+  console.log("Detected Project node_id:", result.repository.projectV2.id);
+  return result.repository.projectV2.id;
 }
 
 // ===== Markdown parsing =====
@@ -70,7 +73,7 @@ async function addToProject(issueNodeId, projectNodeId) {
 
 // ===== Main =====
 async function main() {
-  const projectNodeId = await getProjectId(); // auto-fetch
+  const projectNodeId = await getProjectId(); // fetch GraphQL ID
 
   const backlogDir = path.join(process.cwd(), "backlog");
   const files = fs.readdirSync(backlogDir).filter(f => f.endsWith(".md"));
