@@ -1,0 +1,31 @@
+name: Sync Backlog
+
+on:
+  push:
+    paths:
+      - "backlog/**/*.md"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      contents: read
+      projects: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm install
+
+      - name: Run backlog parser
+        run: node scripts/sync-backlog.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
