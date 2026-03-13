@@ -4,6 +4,10 @@ on:
   push:
     paths:
       - "backlog/**/*.md"
+  workflow_dispatch:   # allows manual run
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # force actions to run on Node 24
 
 jobs:
   sync:
@@ -12,20 +16,24 @@ jobs:
     permissions:
       issues: write
       contents: read
-      projects: write
 
     steps:
-      - uses: actions/checkout@v4
+      # 1️⃣ Checkout repo
+      - name: Checkout code
+        uses: actions/checkout@v4   # latest v4 version
 
-      - name: Setup Node
+      # 2️⃣ Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24   # Node.js version for your script
 
-      - name: Install deps
+      # 3️⃣ Install npm dependencies
+      - name: Install dependencies
         run: npm install
 
+      # 4️⃣ Run backlog parser
       - name: Run backlog parser
         run: node scripts/sync-backlog.js
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}  # PAT with repo + project access
