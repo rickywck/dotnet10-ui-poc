@@ -1,0 +1,24 @@
+{
+  "name": "dotnet",
+  "version": "1.0.0",
+  "description": "This application serves as an educational demonstration of the three main UI implementation approaches available in .NET 10 for building web applications:",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rickywck/dotnet10-ui-poc.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/rickywck/dotnet10-ui-poc/issues"
+  },
+  "homepage": "https://github.com/rickywck/dotnet10-ui-poc#readme",
+  "dependencies": {
+    "@octokit/rest": "^22.0.1"
+  }
+}

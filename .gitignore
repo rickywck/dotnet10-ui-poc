@@ -136,3 +136,10 @@ __pycache__/
 *$py.class
 
 .fake
+
+# Node.js packages and caches
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-store/
