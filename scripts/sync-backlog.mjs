@@ -18,12 +18,17 @@ function getIssueNumber(text) {
   return m ? parseInt(m[1]) : null;
 }
 
-function insertIssueNumber(section, issueNumber) {
-  if (section.includes("github-issue")) return section;
+function insertStoryIssueNumber(md, storyTitle, issueNumber) {
 
-  const lines = section.split("\n");
-  lines.splice(1, 0, `<!-- github-issue: ${issueNumber} -->`);
-  return lines.join("\n");
+  const regex = new RegExp(
+    `(### ${storyTitle}\\n)(?!<!-- github-issue)`,
+    "m"
+  );
+
+  return md.replace(
+    regex,
+    `$1<!-- github-issue: ${issueNumber} -->\n`
+  );
 }
 
 function parseMarkdown(md) {
@@ -124,38 +129,36 @@ async function processFile(filePath) {
     );
   }
 
-  for (const story of stories) {
+for (const story of stories) {
 
-    const storyIssue = getIssueNumber(story.raw);
+  const storyIssue = getIssueNumber(story.raw);
 
-    const storyTitle = `${story.title}`;
-    const storyBody = story.body + `\nParent Feature: #${featureIssue}`;
+  const storyTitle = story.title;
+  const storyBody = story.body + `\nParent Feature: #${featureIssue}`;
 
-    if (!storyIssue) {
+  if (!storyIssue) {
 
-      const newIssue = await createIssue(
-        storyTitle,
-        storyBody,
-        ["user-story"]
-      );
+    const newIssue = await createIssue(
+      storyTitle,
+      storyBody,
+      ["user-story"]
+    );
 
-      const updated = insertIssueNumber(story.raw, newIssue);
-      md = md.replace(story.raw, updated);
+    md = insertStoryIssueNumber(md, storyTitle, newIssue);
 
-      console.log(`Created story issue #${newIssue}`);
-    }
-    else {
+    console.log(`Created story issue #${newIssue}`);
 
-      await updateIssue(
-        storyIssue,
-        storyTitle,
-        storyBody
-      );
+  } else {
 
-      console.log(`Updated story issue #${storyIssue}`);
-    }
+    await updateIssue(
+      storyIssue,
+      storyTitle,
+      storyBody
+    );
+
+    console.log(`Updated story issue #${storyIssue}`);
   }
-
+}
   fs.writeFileSync(filePath, md);
 }
 
