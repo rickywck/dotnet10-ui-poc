@@ -29,9 +29,9 @@ function insertStoryIssue(mdBlock, storyTitle, issueNumber) {
   return mdBlock.replace(regex, `$1\n<!-- github-issue: ${issueNumber} -->`);
 }
 
-// Extract issue number from a block
-function getIssueNumber(mdBlock) {
-  const match = mdBlock.match(/<!-- github-issue: (\d+) -->/);
+// Extract issue number from a line (feature or story header)
+function getIssueNumber(mdLine) {
+  const match = mdLine.match(/<!-- github-issue:\s*(\d+) -->/);
   return match ? parseInt(match[1], 10) : null;
 }
 
