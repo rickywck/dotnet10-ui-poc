@@ -12,6 +12,6 @@ Allow customers to authenticate with any of their known identifiers.
 
 ## Feature: Password reset
 <!-- github-issue: 80 -->
-<!-- github-updated-at: 2026-03-14T17:18:14Z -->
+<!-- github-updated-at: 2026-03-14T17:20:40Z -->
 
 Allow customers to regain access when they forget their password. Requires MFA.
