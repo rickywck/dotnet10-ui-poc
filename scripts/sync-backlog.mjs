@@ -19,7 +19,7 @@ const octokit = new Octokit({ auth: GITHUB_TOKEN });
 // Insert GitHub issue number after feature header
 function insertFeatureIssue(mdBlock, issueNumber) {
   if (mdBlock.includes(`<!-- github-issue:`)) return mdBlock;
-  return mdBlock.replace(/(# Feature:.*)/, `$1<!-- github-issue: ${issueNumber} -->\n`);
+  return mdBlock.replace(/(# Feature:.*)/, `$1\n<!-- github-issue: ${issueNumber} -->`);
 }
 
 // Insert GitHub issue number after story header
