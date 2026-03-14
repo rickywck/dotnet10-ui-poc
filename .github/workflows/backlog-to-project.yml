@@ -1,11 +1,16 @@
 name: Sync Backlog
 
 on:
+  workflow_dispatch:
+
   push:
+    branches:
+      - master
     paths:
       - "backlog/**/*.md"
-  workflow_dispatch:   # allows manual run
-
+    paths-ignore:
+      - "backlog/**/*.md"
+      
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # force actions to run on Node 24
 
@@ -42,6 +47,11 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
+        
           git add backlog/*.md
           git commit -m "Sync GitHub issue mapping" || echo "No changes"
-          git push
+      
+          for i in {1..3}; do
+            git pull --rebase origin master && git push && break
+            sleep 2
+          done
