@@ -4,7 +4,9 @@
   "description": "This application serves as an educational demonstration of the three main UI implementation approaches available in .NET 10 for building web applications:",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sync:backlog": "node scripts/sync-backlog.mjs",
+    "generate:backlog-samples": "node scripts/generate-backlog-samples.mjs"
   },
   "repository": {
     "type": "git",
