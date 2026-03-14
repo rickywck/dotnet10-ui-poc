@@ -17,29 +17,25 @@ const octokit = new Octokit({ auth: GITHUB_TOKEN });
 // --------------------------
 
 // Insert GitHub issue number after feature header
-function insertFeatureIssue(mdBlock, issueNumber) {
-  if (mdBlock.includes(`<!-- github-issue:`)) return mdBlock;
-  return mdBlock.replace(/(# Feature:.*)/, `$1\n<!-- github-issue: ${issueNumber} -->`);
+function insertFeatureIssue(mdLine, issueNumber) {
+  if (mdLine.includes(`<!-- github-issue:`)) return mdLine;
+  return `${mdLine}\n<!-- github-issue: ${issueNumber} -->`;
 }
 
 // Insert GitHub issue number after story header
-function insertStoryIssue(mdBlock, storyTitle, issueNumber) {
-  const regex = new RegExp(`(###\\s*${storyTitle}\\s*)`);
-  if (mdBlock.includes(`<!-- github-issue: ${issueNumber} -->`)) return mdBlock;
-  return mdBlock.replace(regex, `$1\n<!-- github-issue: ${issueNumber} -->`);
+function insertStoryIssue(mdLine, issueNumber) {
+  if (mdLine.includes(`<!-- github-issue:`)) return mdLine;
+  return `${mdLine}\n<!-- github-issue: ${issueNumber} -->`;
 }
 
-// Extract issue number from header + next line
+// Extract issue number from header, scanning next few lines if necessary
 function getIssueNumber(mdLines, index) {
-  // Check current line
-  let line = mdLines[index] || "";
-  let nextLine = mdLines[index + 1] || "";
-
-  const match =
-    line.match(/<!-- github-issue:\s*(\d+) -->/) ||
-    nextLine.match(/<!-- github-issue:\s*(\d+) -->/);
-
-  return match ? parseInt(match[1], 10) : null;
+  for (let offset = 0; offset <= 3; offset++) {
+    const line = mdLines[index + offset] || "";
+    const match = line.match(/<!-- github-issue:\s*(\d+) -->/);
+    if (match) return parseInt(match[1], 10);
+  }
+  return null;
 }
 
 // Extract feature body: lines after header until next header (# Feature or ###)
@@ -47,14 +43,14 @@ function extractFeatureBody(mdLines, startIndex) {
   const bodyLines = [];
   for (let i = startIndex + 1; i < mdLines.length; i++) {
     const line = mdLines[i];
-    if (line.startsWith('# Feature:') || line.startsWith('### ')) break;
+    if (line.startsWith("# Feature:") || line.startsWith("### ")) break;
     bodyLines.push(line);
   }
-  return bodyLines.join('\n').trim();
+  return bodyLines.join("\n").trim();
 }
 
 // --------------------------
-// GitHub API
+// GITHUB API
 // --------------------------
 
 async function createIssue(title, body, labels = []) {
@@ -85,7 +81,7 @@ async function updateIssue(number, title, body) {
 async function processFile(filePath) {
   let md = fs.readFileSync(filePath, "utf-8");
   const mdLines = md.split("\n");
-  let updatedMD = [];
+  const updatedMD = [];
   let i = 0;
 
   while (i < mdLines.length) {
@@ -96,7 +92,7 @@ async function processFile(filePath) {
       const featureBody = extractFeatureBody(mdLines, i);
 
       // Create/update feature issue
-      let featureIssueNumber = getIssueNumber(line);
+      let featureIssueNumber = getIssueNumber(mdLines, i);
       if (!featureIssueNumber) {
         featureIssueNumber = await createIssue(
           `Feature: ${featureTitle}`,
@@ -119,24 +115,29 @@ async function processFile(filePath) {
 
         if (storyLine.startsWith("### ")) {
           const storyTitle = storyLine.replace("###", "").trim();
+
           // Collect story body
           const storyBodyLines = [];
           let j = i + 1;
-          while (j < mdLines.length && !mdLines[j].startsWith("### ") && !mdLines[j].startsWith("# Feature:")) {
+          while (
+            j < mdLines.length &&
+            !mdLines[j].startsWith("### ") &&
+            !mdLines[j].startsWith("# Feature:")
+          ) {
             storyBodyLines.push(mdLines[j]);
             j++;
           }
           const storyBody = storyBodyLines.join("\n").trim();
 
           // Create/update story issue
-          let storyIssueNumber = getIssueNumber(storyLine);
+          let storyIssueNumber = getIssueNumber(mdLines, i);
           if (!storyIssueNumber) {
             storyIssueNumber = await createIssue(
               storyTitle,
               `${storyBody}\n\nParent Feature: #${featureIssueNumber}`,
               ["user-story"]
             );
-            storyLine = insertStoryIssue(storyLine, storyTitle, storyIssueNumber);
+            storyLine = insertStoryIssue(storyLine, storyIssueNumber);
             console.log(`Created story issue #${storyIssueNumber}`);
           } else {
             await updateIssue(
@@ -172,7 +173,7 @@ async function processFile(filePath) {
 
 async function main() {
   try {
-    const files = fs.readdirSync(BACKLOG_DIR).filter(f => f.endsWith(".md"));
+    const files = fs.readdirSync(BACKLOG_DIR).filter((f) => f.endsWith(".md"));
     console.log("Found backlog files:", files);
 
     for (const file of files) {
