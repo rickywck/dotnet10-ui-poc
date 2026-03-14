@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
 import { Octokit } from "@octokit/rest";
 
 // --------------------------
@@ -10,12 +11,71 @@ const EPICS_DIR = path.join(BACKLOG_DIR, "epics");
 const STORIES_DIR = path.join(BACKLOG_DIR, "stories");
 const FIXTURE_DIR_NAMES = new Set(["fixtures", "_fixtures", "samples", "_samples"]);
 
-const GITHUB_OWNER = "rickywck";
-const GITHUB_REPO = "dotnet10-ui-poc";
 const GITHUB_TOKEN = process.env.GH_PAT;
+
+function parseRepoSlug(slug) {
+  if (!slug) return null;
+  const trimmed = slug.trim();
+  const parts = trimmed.split("/");
+  if (parts.length !== 2) return null;
+  const owner = parts[0].trim();
+  const repo = parts[1].trim();
+  if (!owner || !repo) return null;
+  return { owner, repo };
+}
+
+function parseRepoFromRemoteUrl(remoteUrl) {
+  if (!remoteUrl) return null;
+  const trimmed = remoteUrl.trim();
+  const match = trimmed.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/i);
+  if (!match) return null;
+  return {
+    owner: match[1],
+    repo: match[2],
+  };
+}
+
+function resolveRepositoryInfo() {
+  // Optional explicit overrides for local/debug scenarios.
+  if (process.env.GH_OWNER && process.env.GH_REPO) {
+    return {
+      owner: process.env.GH_OWNER.trim(),
+      repo: process.env.GH_REPO.trim(),
+    };
+  }
+
+  const fromGhRepository = parseRepoSlug(process.env.GH_REPOSITORY);
+  if (fromGhRepository) return fromGhRepository;
+
+  const fromGithubRepository = parseRepoSlug(process.env.GITHUB_REPOSITORY);
+  if (fromGithubRepository) return fromGithubRepository;
+
+  // Fallback for local runs outside GitHub Actions.
+  try {
+    const remoteUrl = execSync("git config --get remote.origin.url", {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    return parseRepoFromRemoteUrl(remoteUrl);
+  } catch {
+    return null;
+  }
+}
+
+const repositoryInfo = resolveRepositoryInfo();
+const GITHUB_OWNER = repositoryInfo?.owner;
+const GITHUB_REPO = repositoryInfo?.repo;
 
 if (!GITHUB_TOKEN) {
   console.error("Missing GH_PAT environment variable");
+  process.exit(1);
+}
+
+if (!GITHUB_OWNER || !GITHUB_REPO) {
+  console.error(
+    "Unable to resolve target repository. Set GITHUB_REPOSITORY (owner/repo), " +
+      "or GH_OWNER and GH_REPO, or configure git remote.origin.url."
+  );
   process.exit(1);
 }
 
