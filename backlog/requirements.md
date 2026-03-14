@@ -5,7 +5,7 @@ Allow customers to login to the portal.
 ### US-1
 <!-- github-issue: 46 -->
 As a customer  
-I want to login using email, user ID and phone number
+I want to login using email
 So that I can access my account
 
 ### US-2
