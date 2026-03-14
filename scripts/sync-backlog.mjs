@@ -111,15 +111,18 @@ function upsertHeadingComments(lines, headingIndex, orderedComments) {
     if (parsed) keyToLine.set(parsed.key, i);
   }
 
-  let insertAt = headingIndex + 1;
+  const missing = [];
   for (const [key, value] of orderedComments) {
     const line = `<!-- ${key}: ${value} -->`;
     if (keyToLine.has(key)) {
       lines[keyToLine.get(key)] = line;
     } else {
-      lines.splice(insertAt, 0, line);
-      insertAt += 1;
+      missing.push(line);
     }
+  }
+
+  if (missing.length) {
+    lines.splice(headingIndex + 1, 0, ...missing);
   }
 }
 
@@ -416,6 +419,28 @@ async function syncIssue(item, issueTitle, issueBody, labels) {
   };
 }
 
+async function findExistingStoryIssue(parentFeatureIssueNumber, storyIssueTitle) {
+  const q = `repo:${GITHUB_OWNER}/${GITHUB_REPO} is:issue in:title \"${storyIssueTitle}\"`;
+  const { data } = await octokit.search.issuesAndPullRequests({
+    q,
+    per_page: 50,
+  });
+
+  const match = data.items.find((issue) => {
+    if (issue.title !== storyIssueTitle) return false;
+    const body = issue.body || "";
+    return body.includes(`Parent Feature: #${parentFeatureIssueNumber}`);
+  });
+
+  if (!match) return null;
+
+  return {
+    number: match.number,
+    nodeId: match.node_id,
+    updatedAt: match.updated_at,
+  };
+}
+
 // --------------------------
 // VALIDATION
 // --------------------------
@@ -568,6 +593,24 @@ async function main() {
       const parentFeature = featureByTitle.get(normalizeTitle(story.parentFeatureTitle));
       if (!parentFeature?.issueNumber) {
         throw new Error(`Missing parent feature issue for story '${story.title}'`);
+      }
+
+      // Safeguard for first sync: if local story has no issue ID, try to reuse existing
+      // child issue under the resolved parent feature before creating a new issue.
+      if (!story.issueNumber) {
+        const existingStory = await findExistingStoryIssue(
+          parentFeature.issueNumber,
+          `User Story: ${story.title}`
+        );
+
+        if (existingStory) {
+          story.issueNumber = existingStory.number;
+          story.nodeId = existingStory.nodeId;
+          story.lastSyncedUpdatedAt = existingStory.updatedAt;
+          console.log(
+            `Reused existing story issue #${story.issueNumber} for '${story.title}' under feature #${parentFeature.issueNumber}`
+          );
+        }
       }
 
       const storyBody = formatBody(story.body, [
