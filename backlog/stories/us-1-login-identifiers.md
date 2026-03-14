@@ -4,5 +4,5 @@
 <!-- parent-feature-title: #Login with email, user ID, and phone number -->
 
 As a customer
-I want to login using email, account number or telephone number
+I want to login using email, account ID and mobile
 So that I can access my account

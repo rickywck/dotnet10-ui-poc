@@ -14,4 +14,4 @@ Allow customers to authenticate with any of their known identifiers.
 <!-- github-issue: 80 -->
 <!-- github-updated-at: 2026-03-14T17:18:14Z -->
 
-Allow customers to regain access when they forget their password.
+Allow customers to regain access when they forget their password. Requires MFA.
