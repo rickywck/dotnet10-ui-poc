@@ -5,5 +5,5 @@
 <!-- parent-feature-link: ../epics/customer-portal-login.md#feature-login-with-email-user-id-and-phone-number -->
 
 As a customer
-I want to login using email, user ID and phone number
+I want to login using email, account number or mobile
 So that I can access my account
