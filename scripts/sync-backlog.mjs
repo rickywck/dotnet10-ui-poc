@@ -251,14 +251,10 @@ function parseStoryFile(filePath) {
 
   const storyMeta = extractSectionMeta(lines, storyHeadingIndex);
   const parentFeatureTitleRaw = storyMeta.meta["parent-feature-title"];
-  const parentFeatureLink = storyMeta.meta["parent-feature-link"];
+  const parentFeatureLink = storyMeta.meta["parent-feature-link"] || null;
 
   if (!parentFeatureTitleRaw) {
     throw new Error(`Story missing parent-feature-title metadata: ${toPosix(filePath)}`);
-  }
-
-  if (!parentFeatureLink) {
-    throw new Error(`Story missing parent-feature-link metadata: ${toPosix(filePath)}`);
   }
 
   const parentFeatureTitle = ensureStartsWithPrefix(parentFeatureTitleRaw, "#").slice(1).trim();
@@ -478,7 +474,9 @@ function writeMetadataComments(items) {
 
     if (item.type === "story") {
       comments.push(["parent-feature-title", `#${item.parentFeatureTitle}`]);
-      comments.push(["parent-feature-link", item.parentFeatureLink]);
+      if (item.parentFeatureLink) {
+        comments.push(["parent-feature-link", item.parentFeatureLink]);
+      }
     }
 
     updatesByFile.get(item.filePath).push({
@@ -575,7 +573,9 @@ async function main() {
       const storyBody = formatBody(story.body, [
         `Parent Feature: #${parentFeature.issueNumber}`,
         `Parent Feature Title: #${parentFeature.title}`,
-        `Parent Feature Backlog Link: ${story.parentFeatureLink}`,
+        story.parentFeatureLink
+          ? `Parent Feature Backlog Link: ${story.parentFeatureLink}`
+          : null,
       ]);
 
       const result = await syncIssue(
