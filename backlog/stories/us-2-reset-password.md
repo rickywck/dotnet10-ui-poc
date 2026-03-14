@@ -4,5 +4,5 @@
 <!-- parent-feature-title: #Password reset -->
 
 As a customer
-I want to reset my password
+I want to reset my password with MFA authentication
 So that I can regain access
