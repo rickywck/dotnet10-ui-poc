@@ -5,15 +5,10 @@ import { Octokit } from "@octokit/rest";
 // --------------------------
 // CONFIGURATION
 // --------------------------
-
-const BACKLOG_DIR = "./backlog"; // your MD files directory
+const BACKLOG_DIR = "./backlog"; // directory of your MD files
 const GITHUB_OWNER = "rickywck"; // your GitHub username/org
-const GITHUB_REPO = "dotnet10-ui-poc"; // your repository
+const GITHUB_REPO = "dotnet10-ui-poc"; // repo name
 const GITHUB_TOKEN = process.env.GH_PAT;
-
-// --------------------------
-// GITHUB CLIENT
-// --------------------------
 
 const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
@@ -23,20 +18,19 @@ const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
 // Insert feature issue number after feature header
 function insertIssueNumber(md, issueNumber) {
-  if (md.includes("<!-- github-issue:")) return md;
-  return md.replace(
-    /(# Feature:[^\n]*\n)/,
-    `$1<!-- github-issue: ${issueNumber} -->\n`
-  );
+  const regex = /(# Feature:.*)(\r?\n)/;
+  if (md.includes(`<!-- github-issue:`)) return md; // avoid duplicates
+  return md.replace(regex, `$1$2<!-- github-issue: ${issueNumber} -->\n`);
 }
 
 // Insert user story issue number after the story header
 function insertStoryIssueNumber(md, storyTitle, issueNumber) {
-  const regex = new RegExp(`(### ${storyTitle}\\n)(?!<!-- github-issue)`, "m");
-  return md.replace(regex, `$1<!-- github-issue: ${issueNumber} -->\n`);
+  const regex = new RegExp(`(###\\s*${storyTitle}\\s*)(\\r?\\n)`);
+  if (md.includes(`<!-- github-issue: ${issueNumber} -->`)) return md;
+  return md.replace(regex, `$1$2<!-- github-issue: ${issueNumber} -->\n`);
 }
 
-// Extract existing issue number from markdown for a block
+// Extract existing issue number from a markdown block
 function getIssueNumber(mdBlock) {
   const match = mdBlock.match(/<!-- github-issue: (\d+) -->/);
   return match ? parseInt(match[1], 10) : null;
@@ -69,10 +63,11 @@ async function updateIssue(number, title, body) {
 // PARSING FUNCTIONS
 // --------------------------
 
-// Parse markdown file into features and stories
+// Parse a markdown file into features and stories
 function parseMD(content) {
   const features = [];
   const featureBlocks = content.split(/^# Feature:/m).slice(1);
+
   for (const block of featureBlocks) {
     const lines = block.trim().split("\n");
     const featureTitle = lines[0].trim();
@@ -90,6 +85,7 @@ function parseMD(content) {
 
     features.push({ title: featureTitle, body: featureBody, stories });
   }
+
   return features;
 }
 
@@ -102,7 +98,9 @@ async function processFile(filePath) {
   const features = parseMD(md);
 
   for (const feature of features) {
+    // Check for existing feature issue number
     let featureIssue = getIssueNumber(md);
+
     const featureBody = feature.body + "\n";
 
     if (!featureIssue) {
@@ -134,9 +132,9 @@ async function processFile(filePath) {
     }
   }
 
-  // Write back updated markdown
+  // Write updated markdown back to file
   fs.writeFileSync(filePath, md, "utf-8");
-  console.log(`Updated file: ${filePath}`);
+  console.log(`Updated MD file: ${filePath}`);
 }
 
 // --------------------------
