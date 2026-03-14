@@ -7,7 +7,7 @@ Allow customers to login to the portal.
 
 ### US-1
 As a customer  
-I want to login using email  
+I want to login using email and user ID
 So that I can access my account
 
 ### US-2
