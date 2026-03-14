@@ -8,8 +8,6 @@ on:
       - master
     paths:
       - "backlog/**/*.md"
-    paths-ignore:
-      - "backlog/**/*.md"
       
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # force actions to run on Node 24
