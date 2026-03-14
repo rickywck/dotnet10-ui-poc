@@ -33,6 +33,37 @@ On each run, the action:
 8. Applies conflict protection:
    - If a GitHub issue was manually updated after last synced timestamp, overwrite is skipped and conflict is logged.
 
+## C4 Context Diagram
+
+```mermaid
+C4Context
+   title Backlog Sync GitHub Action - System Context
+
+   Person(productOwner, "Product Owner", "Maintains requirement backlog files")
+   Person(devTeam, "Engineering Team", "Updates backlog and triggers sync on push")
+
+   System(syncAction, "Backlog Sync GitHub Action", "Parses backlog Markdown and syncs to GitHub Issues")
+
+   System_Ext(repoBacklog, "Repository Backlog Markdown", "Epic/Feature/User Story files")
+   System_Ext(githubIssues, "GitHub Issues API", "Creates and updates Issues")
+   System_Ext(githubGraphQL, "GitHub GraphQL API", "Adds native sub-issue relationships")
+   System_Ext(githubProject, "GitHub Project", "Tracks synced Issues via GitHub workflows/rules")
+   System_Ext(githubSecrets, "GitHub Actions Secrets", "Provides GH_TOKEN as GH_PAT")
+
+   Rel_D(productOwner, repoBacklog, "Writes and refines requirements", "Markdown")
+   Rel_D(devTeam, syncAction, "Pushes backlog changes or runs manually", "GitHub Actions")
+
+   Rel_D(syncAction, repoBacklog, "Reads and writes metadata comments", "Filesystem in workflow checkout")
+   Rel_D(syncAction, githubIssues, "Create/update issue data", "REST API")
+   Rel_D(syncAction, githubGraphQL, "Link parent-child issues", "GraphQL")
+   Rel_D(syncAction, githubSecrets, "Reads GH_PAT", "Workflow env")
+   Rel_D(githubIssues, githubProject, "Issues appear/are mapped in project", "GitHub platform automation")
+
+   UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
+```
+
+Note: the script directly integrates with GitHub Issues and GraphQL sub-issue mutation. GitHub Project sync is typically indirect through GitHub project rules/automation over those issues.
+
 ## Triggers
 
 The workflow runs on:
