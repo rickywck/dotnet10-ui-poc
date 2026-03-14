@@ -1,106 +1,103 @@
 #!/usr/bin/env node
+
 import fs from "fs";
 import path from "path";
 import { Octokit } from "@octokit/rest";
-import { graphql } from "@octokit/graphql";
 
-const owner = "rickywck"; // replace
-const repo = "dotnet10-ui-poc";               // replace
-const projectNumber = 1;                     // the number in GitHub URL: /projects/1
+const owner = "rickywck";
+const repo = "dotnet10-ui-poc";
 
-const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-const graphqlWithAuth = graphql.defaults({
-  headers: { authorization: `token ${process.env.GITHUB_TOKEN}` },
+const octokit = new Octokit({
+  auth: process.env.GH_TOKEN
 });
 
-// ===== GraphQL query to get project v2 node ID =====
-async function getProjectId() {
-  const query = `
-    query($owner:String!, $repo:String!, $number:Int!) {
-      repository(owner:$owner, name:$repo) {
-        projectV2(number:$number) {
-          id
-          title
-        }
-      }
-    }
-  `;
-  const result = await graphqlWithAuth(query, { owner, repo, number: projectNumber });
-  console.log("Detected Project node_id:", result.repository.projectV2.id);
-  return result.repository.projectV2.id;
+const backlogDir = path.join(process.cwd(), "backlog");
+
+function getIssueNumber(md) {
+  const match = md.match(/<!--\s*github-issue:\s*(\d+)\s*-->/);
+  return match ? parseInt(match[1]) : null;
 }
 
-// ===== Markdown parsing =====
-function parseMarkdown(fileContent) {
-  const lines = fileContent.split("\n");
-  const features = [];
-  let currentFeature = null;
-  let currentStory = null;
+function insertIssueNumber(md, issueNumber) {
+  if (md.includes("<!-- github-issue:")) return md;
 
-  for (let line of lines) {
-    line = line.trim();
-    if (line.startsWith("# Feature:")) {
-      currentFeature = { title: line.replace("# Feature:", "").trim(), description: "", stories: [] };
-      features.push(currentFeature);
-    } else if (line.startsWith("### ")) {
-      currentStory = { title: line.replace("### ", "").trim(), body: "" };
-      if (currentFeature) currentFeature.stories.push(currentStory);
-    } else if (line.length > 0) {
-      if (currentStory) currentStory.body += line + "\n";
-      else if (currentFeature) currentFeature.description += line + "\n";
+  return md.replace(
+    /(#[^\n]*\n)/,
+    `$1\n<!-- github-issue: ${issueNumber} -->\n`
+  );
+}
+
+function parseFeature(md) {
+  const lines = md.split("\n");
+
+  let title = "";
+  let body = "";
+
+  for (const line of lines) {
+    if (line.startsWith("# ")) {
+      title = line.replace("# ", "").trim();
+    } else {
+      body += line + "\n";
     }
   }
-  return features;
+
+  return { title, body };
 }
 
-// ===== Create issues =====
-async function createIssue(title, body, labels = []) {
-  const issue = await octokit.issues.create({ owner, repo, title, body, labels });
-  console.log(`Created issue #${issue.data.number}: ${title}`);
-  return issue.data;
+async function createIssue(title, body) {
+  const res = await octokit.issues.create({
+    owner,
+    repo,
+    title,
+    body,
+    labels: ["feature"]
+  });
+
+  console.log(`Created issue #${res.data.number}`);
+
+  return res.data.number;
 }
 
-// ===== Add issue to project =====
-async function addToProject(issueNodeId, projectNodeId) {
-  await graphqlWithAuth(`
-    mutation ($projectId: ID!, $contentId: ID!) {
-      addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
-        item { id }
-      }
-    }
-  `, { projectId: projectNodeId, contentId: issueNodeId });
+async function updateIssue(issueNumber, title, body) {
+  await octokit.issues.update({
+    owner,
+    repo,
+    issue_number: issueNumber,
+    title,
+    body
+  });
+
+  console.log(`Updated issue #${issueNumber}`);
 }
 
-// ===== Main =====
 async function main() {
-  const projectNodeId = await getProjectId(); // fetch GraphQL ID
 
-  const backlogDir = path.join(process.cwd(), "backlog");
   const files = fs.readdirSync(backlogDir).filter(f => f.endsWith(".md"));
+
   console.log("Found backlog files:", files);
 
   for (const file of files) {
-    const content = fs.readFileSync(path.join(backlogDir, file), "utf-8");
-    const features = parseMarkdown(content);
-    console.log("Parsed features:", features.map(f => f.title));
 
-    for (const feature of features) {
-      const featureIssue = await createIssue(feature.title, feature.description, ["feature"]);
-      await addToProject(featureIssue.node_id, projectNodeId);
+    const filePath = path.join(backlogDir, file);
+    let md = fs.readFileSync(filePath, "utf8");
 
-      for (const story of feature.stories) {
-        const storyIssue = await createIssue(story.title, story.body, ["user-story"]);
+    const { title, body } = parseFeature(md);
 
-        await octokit.issues.createComment({
-          owner,
-          repo,
-          issue_number: storyIssue.number,
-          body: `Parent Feature: #${featureIssue.number}`,
-        });
+    const issueNumber = getIssueNumber(md);
 
-        await addToProject(storyIssue.node_id, projectNodeId);
-        console.log(`Linked user story #${storyIssue.number} to feature #${featureIssue.number}`);
-      }
+    if (issueNumber) {
+
+      await updateIssue(issueNumber, title, body);
+
+    } else {
+
+      const newIssueNumber = await createIssue(title, body);
+
+      md = insertIssueNumber(md, newIssueNumber);
+
+      fs.writeFileSync(filePath, md);
+
+      console.log(`Stored issue mapping in ${file}`);
     }
   }
 }
