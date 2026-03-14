@@ -26,7 +26,7 @@ function insertFeatureIssue(mdBlock, issueNumber) {
 function insertStoryIssue(mdBlock, storyTitle, issueNumber) {
   const regex = new RegExp(`(###\\s*${storyTitle}\\s*)`);
   if (mdBlock.includes(`<!-- github-issue: ${issueNumber} -->`)) return mdBlock;
-  return mdBlock.replace(regex, `$1<!-- github-issue: ${issueNumber} -->\n`);
+  return mdBlock.replace(regex, `$1\n<!-- github-issue: ${issueNumber} -->`);
 }
 
 // Extract issue number from a block
