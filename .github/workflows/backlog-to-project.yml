@@ -36,4 +36,4 @@ jobs:
       - name: Run backlog parser
         run: node scripts/sync-backlog.mjs
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}  # PAT with repo + project access
+          GH_PAT: ${{ secrets.GH_TOKEN }}  # PAT with repo + project access
