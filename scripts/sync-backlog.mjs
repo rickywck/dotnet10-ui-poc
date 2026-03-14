@@ -19,14 +19,14 @@ const octokit = new Octokit({ auth: GITHUB_TOKEN });
 // Insert GitHub issue number after feature header
 function insertFeatureIssue(mdBlock, issueNumber) {
   if (mdBlock.includes(`<!-- github-issue:`)) return mdBlock;
-  return mdBlock.replace(/(# Feature:.*)/, `$1\n\n<!-- github-issue: ${issueNumber} -->`);
+  return mdBlock.replace(/(# Feature:.*)/, `$1<!-- github-issue: ${issueNumber} -->\n`);
 }
 
 // Insert GitHub issue number after story header
 function insertStoryIssue(mdBlock, storyTitle, issueNumber) {
   const regex = new RegExp(`(###\\s*${storyTitle}\\s*)`);
   if (mdBlock.includes(`<!-- github-issue: ${issueNumber} -->`)) return mdBlock;
-  return mdBlock.replace(regex, `$1\n\n<!-- github-issue: ${issueNumber} -->`);
+  return mdBlock.replace(regex, `$1<!-- github-issue: ${issueNumber} -->\n`);
 }
 
 // Extract issue number from a block
