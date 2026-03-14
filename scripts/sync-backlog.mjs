@@ -5,34 +5,43 @@ import { Octokit } from "@octokit/rest";
 // --------------------------
 // CONFIG
 // --------------------------
-const BACKLOG_DIR = "./backlog";
-const GITHUB_OWNER = "rickywck";
-const GITHUB_REPO = "dotnet10-ui-poc";
+const BACKLOG_DIR = "./backlog"; // folder with your MD files
+const GITHUB_OWNER = "rickywck"; // your GitHub username/org
+const GITHUB_REPO = "dotnet10-ui-poc"; // repo name
 const GITHUB_TOKEN = process.env.GH_PAT;
 
 const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
 // --------------------------
-// UTILITY FUNCTIONS
+// HELPERS
 // --------------------------
 
-// Insert feature issue number
+// Insert GitHub issue number after feature header
 function insertFeatureIssue(mdBlock, issueNumber) {
   if (mdBlock.includes(`<!-- github-issue:`)) return mdBlock;
-  return mdBlock.replace(/(# Feature:.*)/, `$1\n<!-- github-issue: ${issueNumber} -->`);
+  return mdBlock.replace(/(# Feature:.*)/, `$1\n\n<!-- github-issue: ${issueNumber} -->`);
 }
 
-// Insert story issue number
+// Insert GitHub issue number after story header
 function insertStoryIssue(mdBlock, storyTitle, issueNumber) {
   const regex = new RegExp(`(###\\s*${storyTitle}\\s*)`);
   if (mdBlock.includes(`<!-- github-issue: ${issueNumber} -->`)) return mdBlock;
-  return mdBlock.replace(regex, `$1\n<!-- github-issue: ${issueNumber} -->`);
+  return mdBlock.replace(regex, `$1\n\n<!-- github-issue: ${issueNumber} -->`);
 }
 
 // Extract issue number from a block
 function getIssueNumber(mdBlock) {
   const match = mdBlock.match(/<!-- github-issue: (\d+) -->/);
   return match ? parseInt(match[1], 10) : null;
+}
+
+// Extract only the body of a feature (up to next feature header)
+function extractFeatureBody(featureBlock) {
+  const nextFeatureIndex = featureBlock.search(/^# Feature:/m);
+  if (nextFeatureIndex > 0) {
+    return featureBlock.slice(0, nextFeatureIndex).trim();
+  }
+  return featureBlock.trim();
 }
 
 // --------------------------
@@ -61,23 +70,26 @@ async function updateIssue(number, title, body) {
 }
 
 // --------------------------
-// PROCESS FILE
+// PARSING & PROCESSING
 // --------------------------
 
 async function processFile(filePath) {
   let md = fs.readFileSync(filePath, "utf-8");
 
-  // Split features
+  // Split file into features
   const featureBlocks = md.split(/^# Feature:/m);
-  let updatedMD = featureBlocks[0]; // keep any content before first feature
+  let updatedMD = featureBlocks[0]; // content before first feature
 
   for (let i = 1; i < featureBlocks.length; i++) {
-    let block = "# Feature:" + featureBlocks[i]; // add back the split header
+    let block = "# Feature:" + featureBlocks[i]; // restore header
     const lines = block.split("\n");
     const featureTitle = lines[0].replace("# Feature:", "").trim();
-    const featureBody = lines.slice(1).join("\n");
+    let featureBody = lines.slice(1).join("\n");
 
-    // Get existing feature issue number
+    // Only include lines up to next feature
+    featureBody = extractFeatureBody(featureBody);
+
+    // Feature issue
     let featureIssue = getIssueNumber(block);
     if (!featureIssue) {
       featureIssue = await createIssue(`Feature: ${featureTitle}`, featureBody, ["feature"]);
@@ -88,9 +100,9 @@ async function processFile(filePath) {
       console.log(`Updated feature issue #${featureIssue}`);
     }
 
-    // Split user stories
+    // Split stories
     const storyBlocks = block.split(/^### /m);
-    let updatedBlock = storyBlocks[0]; // content before first story
+    let updatedBlock = storyBlocks[0]; // before first story
 
     for (let j = 1; j < storyBlocks.length; j++) {
       let storyBlock = "### " + storyBlocks[j];
@@ -100,11 +112,19 @@ async function processFile(filePath) {
 
       let storyIssue = getIssueNumber(storyBlock);
       if (!storyIssue) {
-        storyIssue = await createIssue(storyTitle, `${storyBody}\nParent Feature: #${featureIssue}`, ["user-story"]);
+        storyIssue = await createIssue(
+          storyTitle,
+          `${storyBody}\nParent Feature: #${featureIssue}`,
+          ["user-story"]
+        );
         storyBlock = insertStoryIssue(storyBlock, storyTitle, storyIssue);
         console.log(`Created story issue #${storyIssue}`);
       } else {
-        await updateIssue(storyIssue, storyTitle, `${storyBody}\nParent Feature: #${featureIssue}`);
+        await updateIssue(
+          storyIssue,
+          storyTitle,
+          `${storyBody}\nParent Feature: #${featureIssue}`
+        );
         console.log(`Updated story issue #${storyIssue}`);
       }
 
@@ -115,7 +135,7 @@ async function processFile(filePath) {
   }
 
   fs.writeFileSync(filePath, updatedMD, "utf-8");
-  console.log(`MD file updated: ${filePath}`);
+  console.log(`Updated MD file: ${filePath}`);
 }
 
 // --------------------------
