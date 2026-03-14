@@ -13,52 +13,81 @@ const octokit = new Octokit({
 
 const backlogDir = path.join(process.cwd(), "backlog");
 
-function getIssueNumber(md) {
-  const match = md.match(/<!--\s*github-issue:\s*(\d+)\s*-->/);
-  return match ? parseInt(match[1]) : null;
+function getIssueNumber(text) {
+  const m = text.match(/<!--\s*github-issue:\s*(\d+)\s*-->/);
+  return m ? parseInt(m[1]) : null;
 }
 
-function insertIssueNumber(md, issueNumber) {
-  if (md.includes("<!-- github-issue:")) return md;
+function insertIssueNumber(section, issueNumber) {
+  if (section.includes("github-issue")) return section;
 
-  return md.replace(
-    /(#[^\n]*\n)/,
-    `$1\n<!-- github-issue: ${issueNumber} -->\n`
-  );
+  const lines = section.split("\n");
+  lines.splice(1, 0, `<!-- github-issue: ${issueNumber} -->`);
+  return lines.join("\n");
 }
 
-function parseFeature(md) {
-  const lines = md.split("\n");
+function parseMarkdown(md) {
 
-  let title = "";
-  let body = "";
+  const sections = md.split("\n");
 
-  for (const line of lines) {
-    if (line.startsWith("# ")) {
-      title = line.replace("# ", "").trim();
-    } else {
-      body += line + "\n";
+  let featureTitle = "";
+  let featureBody = "";
+  let stories = [];
+
+  let currentStory = null;
+
+  for (let line of sections) {
+
+    if (line.startsWith("# Feature:")) {
+      featureTitle = line.replace("# Feature:", "").trim();
+    }
+
+    else if (line.startsWith("### ")) {
+
+      if (currentStory) stories.push(currentStory);
+
+      currentStory = {
+        title: line.replace("### ", "").trim(),
+        body: "",
+        raw: line + "\n"
+      };
+    }
+
+    else {
+
+      if (currentStory) {
+        currentStory.body += line + "\n";
+        currentStory.raw += line + "\n";
+      } else {
+        featureBody += line + "\n";
+      }
     }
   }
 
-  return { title, body };
+  if (currentStory) stories.push(currentStory);
+
+  return {
+    featureTitle,
+    featureBody,
+    stories
+  };
 }
 
-async function createIssue(title, body) {
+async function createIssue(title, body, labels = []) {
+
   const res = await octokit.issues.create({
     owner,
     repo,
     title,
     body,
-    labels: ["feature"]
+    labels
   });
-
-  console.log(`Created issue #${res.data.number}`);
 
   return res.data.number;
 }
 
 async function updateIssue(issueNumber, title, body) {
+
   await octokit.issues.update({
     owner,
     repo,
@@ -66,43 +95,88 @@ async function updateIssue(issueNumber, title, body) {
     title,
     body
   });
+}
 
-  console.log(`Updated issue #${issueNumber}`);
+async function processFile(filePath) {
+
+  let md = fs.readFileSync(filePath, "utf8");
+
+  const { featureTitle, featureBody, stories } = parseMarkdown(md);
+
+  let featureIssue = getIssueNumber(md);
+
+  if (!featureIssue) {
+
+    featureIssue = await createIssue(
+      `Feature: ${featureTitle}`,
+      featureBody,
+      ["feature"]
+    );
+
+    md = insertIssueNumber(md, featureIssue);
+  }
+  else {
+
+    await updateIssue(
+      featureIssue,
+      `Feature: ${featureTitle}`,
+      featureBody
+    );
+  }
+
+  for (const story of stories) {
+
+    const storyIssue = getIssueNumber(story.raw);
+
+    const storyTitle = `${story.title}`;
+    const storyBody = story.body + `\nParent Feature: #${featureIssue}`;
+
+    if (!storyIssue) {
+
+      const newIssue = await createIssue(
+        storyTitle,
+        storyBody,
+        ["user-story"]
+      );
+
+      const updated = insertIssueNumber(story.raw, newIssue);
+      md = md.replace(story.raw, updated);
+
+      console.log(`Created story issue #${newIssue}`);
+    }
+    else {
+
+      await updateIssue(
+        storyIssue,
+        storyTitle,
+        storyBody
+      );
+
+      console.log(`Updated story issue #${storyIssue}`);
+    }
+  }
+
+  fs.writeFileSync(filePath, md);
 }
 
 async function main() {
 
-  const files = fs.readdirSync(backlogDir).filter(f => f.endsWith(".md"));
+  const files = fs.readdirSync(backlogDir)
+    .filter(f => f.endsWith(".md"));
 
   console.log("Found backlog files:", files);
 
   for (const file of files) {
 
     const filePath = path.join(backlogDir, file);
-    let md = fs.readFileSync(filePath, "utf8");
 
-    const { title, body } = parseFeature(md);
-
-    const issueNumber = getIssueNumber(md);
-
-    if (issueNumber) {
-
-      await updateIssue(issueNumber, title, body);
-
-    } else {
-
-      const newIssueNumber = await createIssue(title, body);
-
-      md = insertIssueNumber(md, newIssueNumber);
-
-      fs.writeFileSync(filePath, md);
-
-      console.log(`Stored issue mapping in ${file}`);
-    }
+    await processFile(filePath);
   }
 }
 
 main().catch(err => {
+
   console.error("Backlog sync failed:", err);
+
   process.exit(1);
 });
