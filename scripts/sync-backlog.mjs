@@ -8,7 +8,7 @@ const owner = "rickywck";
 const repo = "dotnet10-ui-poc";
 
 const octokit = new Octokit({
-  auth: process.env.GH_TOKEN
+  auth: process.env.GH_PAT
 });
 
 const backlogDir = path.join(process.cwd(), "backlog");
