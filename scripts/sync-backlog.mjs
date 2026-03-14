@@ -35,13 +35,15 @@ function getIssueNumber(mdBlock) {
   return match ? parseInt(match[1], 10) : null;
 }
 
-// Extract only the body of a feature (up to next feature header)
-function extractFeatureBody(featureBlock) {
-  const nextFeatureIndex = featureBlock.search(/^# Feature:/m);
-  if (nextFeatureIndex > 0) {
-    return featureBlock.slice(0, nextFeatureIndex).trim();
+// Extract feature body: lines after header until next header (# Feature or ###)
+function extractFeatureBody(mdLines, startIndex) {
+  const bodyLines = [];
+  for (let i = startIndex + 1; i < mdLines.length; i++) {
+    const line = mdLines[i];
+    if (line.startsWith('# Feature:') || line.startsWith('### ')) break;
+    bodyLines.push(line);
   }
-  return featureBlock.trim();
+  return bodyLines.join('\n').trim();
 }
 
 // --------------------------
@@ -70,71 +72,90 @@ async function updateIssue(number, title, body) {
 }
 
 // --------------------------
-// PARSING & PROCESSING
+// PROCESS FILE
 // --------------------------
 
 async function processFile(filePath) {
   let md = fs.readFileSync(filePath, "utf-8");
+  const mdLines = md.split("\n");
+  let updatedMD = [];
+  let i = 0;
 
-  // Split file into features
-  const featureBlocks = md.split(/^# Feature:/m);
-  let updatedMD = featureBlocks[0]; // content before first feature
+  while (i < mdLines.length) {
+    let line = mdLines[i];
 
-  for (let i = 1; i < featureBlocks.length; i++) {
-    let block = "# Feature:" + featureBlocks[i]; // restore header
-    const lines = block.split("\n");
-    const featureTitle = lines[0].replace("# Feature:", "").trim();
-    let featureBody = lines.slice(1).join("\n");
+    if (line.startsWith("# Feature:")) {
+      const featureTitle = line.replace("# Feature:", "").trim();
+      const featureBody = extractFeatureBody(mdLines, i);
 
-    // Only include lines up to next feature
-    featureBody = extractFeatureBody(featureBody);
-
-    // Feature issue
-    let featureIssue = getIssueNumber(block);
-    if (!featureIssue) {
-      featureIssue = await createIssue(`Feature: ${featureTitle}`, featureBody, ["feature"]);
-      block = insertFeatureIssue(block, featureIssue);
-      console.log(`Created feature issue #${featureIssue}`);
-    } else {
-      await updateIssue(featureIssue, `Feature: ${featureTitle}`, featureBody);
-      console.log(`Updated feature issue #${featureIssue}`);
-    }
-
-    // Split stories
-    const storyBlocks = block.split(/^### /m);
-    let updatedBlock = storyBlocks[0]; // before first story
-
-    for (let j = 1; j < storyBlocks.length; j++) {
-      let storyBlock = "### " + storyBlocks[j];
-      const storyLines = storyBlock.split("\n");
-      const storyTitle = storyLines[0].replace("###", "").trim();
-      const storyBody = storyLines.slice(1).join("\n");
-
-      let storyIssue = getIssueNumber(storyBlock);
-      if (!storyIssue) {
-        storyIssue = await createIssue(
-          storyTitle,
-          `${storyBody}\nParent Feature: #${featureIssue}`,
-          ["user-story"]
+      // Create/update feature issue
+      let featureIssueNumber = getIssueNumber(line);
+      if (!featureIssueNumber) {
+        featureIssueNumber = await createIssue(
+          `Feature: ${featureTitle}`,
+          featureBody,
+          ["feature"]
         );
-        storyBlock = insertStoryIssue(storyBlock, storyTitle, storyIssue);
-        console.log(`Created story issue #${storyIssue}`);
+        line = insertFeatureIssue(line, featureIssueNumber);
+        console.log(`Created feature issue #${featureIssueNumber}`);
       } else {
-        await updateIssue(
-          storyIssue,
-          storyTitle,
-          `${storyBody}\nParent Feature: #${featureIssue}`
-        );
-        console.log(`Updated story issue #${storyIssue}`);
+        await updateIssue(featureIssueNumber, `Feature: ${featureTitle}`, featureBody);
+        console.log(`Updated feature issue #${featureIssueNumber}`);
       }
 
-      updatedBlock += storyBlock;
-    }
+      updatedMD.push(line);
+      i++;
 
-    updatedMD += updatedBlock;
+      // Process user stories under this feature
+      while (i < mdLines.length && !mdLines[i].startsWith("# Feature:")) {
+        let storyLine = mdLines[i];
+
+        if (storyLine.startsWith("### ")) {
+          const storyTitle = storyLine.replace("###", "").trim();
+          // Collect story body
+          const storyBodyLines = [];
+          let j = i + 1;
+          while (j < mdLines.length && !mdLines[j].startsWith("### ") && !mdLines[j].startsWith("# Feature:")) {
+            storyBodyLines.push(mdLines[j]);
+            j++;
+          }
+          const storyBody = storyBodyLines.join("\n").trim();
+
+          // Create/update story issue
+          let storyIssueNumber = getIssueNumber(storyLine);
+          if (!storyIssueNumber) {
+            storyIssueNumber = await createIssue(
+              storyTitle,
+              `${storyBody}\n\nParent Feature: #${featureIssueNumber}`,
+              ["user-story"]
+            );
+            storyLine = insertStoryIssue(storyLine, storyTitle, storyIssueNumber);
+            console.log(`Created story issue #${storyIssueNumber}`);
+          } else {
+            await updateIssue(
+              storyIssueNumber,
+              storyTitle,
+              `${storyBody}\n\nParent Feature: #${featureIssueNumber}`
+            );
+            console.log(`Updated story issue #${storyIssueNumber}`);
+          }
+
+          updatedMD.push(storyLine);
+          updatedMD.push(...storyBodyLines);
+          i = j;
+        } else {
+          updatedMD.push(mdLines[i]);
+          i++;
+        }
+      }
+    } else {
+      updatedMD.push(line);
+      i++;
+    }
   }
 
-  fs.writeFileSync(filePath, updatedMD, "utf-8");
+  // Write back updated MD file
+  fs.writeFileSync(filePath, updatedMD.join("\n"), "utf-8");
   console.log(`Updated MD file: ${filePath}`);
 }
 
