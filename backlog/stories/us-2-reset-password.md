@@ -4,5 +4,5 @@
 <!-- parent-feature-title: #Password reset -->
 
 As a customer
-I want to reset my password with MFA authentication, support SMS, app and email
+I want to reset my password and MFA authentication is required, should support SMS, app and email
 So that I can regain access
