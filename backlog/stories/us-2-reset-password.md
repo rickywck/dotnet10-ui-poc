@@ -1,5 +1,5 @@
 ### User Story: US-2 Reset Password
-<!-- github-sync-status: updated -->
+<!-- github-sync-status: no-change -->
 <!-- github-sync-note: none -->
 <!-- github-issue: 82 -->
 <!-- github-updated-at: 2026-03-15T01:05:50Z -->
