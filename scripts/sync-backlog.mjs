@@ -436,6 +436,7 @@ async function syncIssue(item, issueTitle, issueBody, labels) {
       issueNumber: created.number,
       nodeId: created.node_id,
       updatedAt: created.updated_at,
+      syncStatus: "created",
       skippedConflict: false,
     };
   }
@@ -449,6 +450,7 @@ async function syncIssue(item, issueTitle, issueBody, labels) {
       issueNumber: existing.number,
       nodeId: existing.node_id,
       updatedAt: existing.updated_at,
+      syncStatus: "no-change",
       skippedConflict: false,
     };
   }
@@ -465,6 +467,7 @@ async function syncIssue(item, issueTitle, issueBody, labels) {
       issueNumber: existing.number,
       nodeId: existing.node_id,
       updatedAt: existing.updated_at,
+      syncStatus: "conflict-skipped-remote-newer",
       skippedConflict: true,
     };
   }
@@ -475,6 +478,7 @@ async function syncIssue(item, issueTitle, issueBody, labels) {
     issueNumber: updated.number,
     nodeId: updated.node_id,
     updatedAt: updated.updated_at,
+    syncStatus: "updated",
     skippedConflict: false,
   };
 }
@@ -555,7 +559,17 @@ function writeMetadataComments(items) {
     const comments = [
       ["github-issue", String(item.issueNumber)],
       ["github-updated-at", item.lastSyncedUpdatedAt],
+      ["github-sync-status", item.syncStatus || "unknown"],
     ];
+
+    if (item.syncStatus === "conflict-skipped-remote-newer") {
+      comments.push([
+        "github-sync-note",
+        "potential-manual-update-on-github-remote-newer-skipped-overwrite",
+      ]);
+    } else {
+      comments.push(["github-sync-note", "none"]);
+    }
 
     if (item.type === "story") {
       comments.push(["parent-feature-title", `#${item.parentFeatureTitle}`]);
@@ -609,6 +623,10 @@ async function main() {
       epic.issueNumber = result.issueNumber;
       epic.lastSyncedUpdatedAt = result.updatedAt;
       epic.nodeId = result.nodeId;
+      epic.syncStatus = result.syncStatus;
+      console.log(
+        `Sync status [epic] #${epic.issueNumber} '${epic.title}': ${epic.syncStatus}`
+      );
       if (result.skippedConflict) conflicts.push(epic);
     }
 
@@ -636,6 +654,10 @@ async function main() {
       feature.issueNumber = result.issueNumber;
       feature.lastSyncedUpdatedAt = result.updatedAt;
       feature.nodeId = result.nodeId;
+      feature.syncStatus = result.syncStatus;
+      console.log(
+        `Sync status [feature] #${feature.issueNumber} '${feature.title}': ${feature.syncStatus}`
+      );
       if (result.skippedConflict) conflicts.push(feature);
 
       if (parentEpic.nodeId && feature.nodeId) {
@@ -691,6 +713,10 @@ async function main() {
       story.issueNumber = result.issueNumber;
       story.lastSyncedUpdatedAt = result.updatedAt;
       story.nodeId = result.nodeId;
+      story.syncStatus = result.syncStatus;
+      console.log(
+        `Sync status [story] #${story.issueNumber} '${story.title}': ${story.syncStatus}`
+      );
       if (result.skippedConflict) conflicts.push(story);
 
       if (parentFeature.nodeId && story.nodeId) {
