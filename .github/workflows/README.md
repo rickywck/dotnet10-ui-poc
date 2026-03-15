@@ -1,6 +1,8 @@
 # Backlog Sync Workflow
 
-This folder contains the GitHub Action that synchronizes backlog Markdown files to GitHub Issues and keeps issue metadata in sync.
+This folder contains the GitHub Action whose primary objective is to let teams create and update backlog items with AI-friendly Markdown while keeping the backlog operationally useful for day-to-day project management.
+
+It synchronizes backlog Markdown files to GitHub Issues so teams can track status, assignment, and progress in GitHub Projects, while preserving the backlog in-repo as a source of truth that downstream SDLC tasks (such as AI-assisted code generation) can reference as structured context.
 
 ## What The Action Does
 
