@@ -1,6 +1,8 @@
 ### User Story: US-2 Reset Password
+<!-- github-sync-status: updated -->
+<!-- github-sync-note: none -->
 <!-- github-issue: 82 -->
-<!-- github-updated-at: 2026-03-14T18:41:44Z -->
+<!-- github-updated-at: 2026-03-15T01:03:08Z -->
 <!-- parent-feature-title: #Password reset -->
 
 As a customer
