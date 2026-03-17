@@ -1,0 +1,67 @@
+name: Custom issue
+description: Create a new issue using the project template
+title: "[Issue]: "
+labels:
+  - needs-triage
+  - backlog
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to open an issue.
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: A short summary of the issue.
+      placeholder: Describe the issue in one sentence
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Explain the problem, expected behavior, and actual behavior.
+      placeholder: |
+        Expected behavior:
+        Actual behavior:
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Share the exact steps so the issue can be reproduced.
+      placeholder: |
+        1. Go to...
+        2. Click on...
+        3. Observe...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which area is affected?
+      options:
+        - Razor Pages
+        - Blazor Static SSR
+        - Blazor SPA
+        - Shared Core
+        - Backlog Sync Workflow
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Add logs, screenshots, links, or anything else useful.
+      placeholder: Paste extra context here
+    validations:
+      required: false
