@@ -1,4 +1,4 @@
-name: Custom issue
+name: Custom issue form
 description: Create a new issue using the project template
 title: "[Issue]: "
 labels:
